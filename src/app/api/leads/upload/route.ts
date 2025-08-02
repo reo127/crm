@@ -1,9 +1,8 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import { Lead } from '@/lib/models';
 import { verifyToken } from '@/lib/auth';
-import csv from 'csv-parser';
+import csvParser from 'csv-parser';
 import { Readable } from 'stream';
 
 export async function POST(req: NextRequest) {
@@ -12,7 +11,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: 'Access denied. No token provided.' }, { status: 401 });
   }
 
-  const decoded = verifyToken(token);
+  const decoded = verifyToken(token) as { userId: string };
   if (!decoded) {
     return NextResponse.json({ message: 'Invalid token.' }, { status: 400 });
   }
@@ -24,47 +23,32 @@ export async function POST(req: NextRequest) {
     const file = formData.get('csvFile') as File;
 
     if (!file) {
-      return NextResponse.json({ message: 'No file uploaded' }, { status: 400 });
+      return NextResponse.json({ message: 'No file uploaded.' }, { status: 400 });
     }
 
-    interface LeadData {
-      name: string;
-      email: string;
-      phoneNumber: string;
-      status: string;
-      userId: string;
-    }
-    const leads: LeadData[] = [];
-    const fileBuffer = await file.arrayBuffer();
-    const readableStream = new Readable();
-    readableStream.push(Buffer.from(fileBuffer));
-    readableStream.push(null);
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const results: Record<string, string>[] = [];
 
-    await new Promise((resolve, reject) => {
-      readableStream
-        .pipe(csv())
-        .on('data', (data) => {
-          if (data.name && data.email && data.phoneNumber) {
-            leads.push({
-              name: data.name,
-              email: data.email,
-              phoneNumber: data.phoneNumber,
-              status: data.status || 'New',
-              userId: decoded.userId,
-            });
-          }
-        })
-        .on('end', resolve)
-        .on('error', reject);
+    await new Promise<void>((resolve, reject) => {
+      Readable.from(buffer)
+        .pipe(csvParser())
+        .on('data', (data) => results.push(data))
+        .on('end', () => resolve())
+        .on('error', (error) => reject(error));
     });
 
-    const savedLeads = await Lead.insertMany(leads);
+    const leadsToInsert = results.map(lead => ({
+      ...lead,
+      userId: decoded.userId,
+    }));
 
-    return NextResponse.json({ 
-      message: `Successfully uploaded ${savedLeads.length} leads`,
-      leads: savedLeads 
-    });
+    await Lead.insertMany(leadsToInsert);
+
+    return NextResponse.json({ message: 'CSV data imported successfully.' });
+
   } catch (error) {
-    return NextResponse.json({ message: 'Server error', error }, { status: 500 });
+    console.error('Upload error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return NextResponse.json({ message: 'Server error during file upload.', error: errorMessage }, { status: 500 });
   }
 }

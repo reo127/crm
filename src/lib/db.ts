@@ -1,7 +1,7 @@
 
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/crm';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://rohan:kankimagi@cluster0.ecwot4i.mongodb.net/crm?retryWrites=true&w=majority&appName=Cluster0';
 
 if (!MONGODB_URI) {
   throw new Error(

@@ -153,6 +153,8 @@ export default function DashboardPage() {
     setNewLead({ name: '', email: '', phoneNumber: '', status: 'New' });
   };
 
+  const [isDragging, setIsDragging] = useState(false);
+
   const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setCsvFile(e.target.files[0]);
@@ -187,6 +189,28 @@ export default function DashboardPage() {
     } catch (error) {
       console.error('Error uploading file:', error);
       alert('An error occurred during file upload.');
+    }
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      setCsvFile(e.dataTransfer.files[0]);
     }
   };
 
@@ -235,6 +259,8 @@ export default function DashboardPage() {
                   <option value="Lost">Lost</option>
                   <option value="Won">Won</option>
                 </select>
+                <div className='text-white px-2.5 py-1.5 rounded-sm bg-green-600'>Total leads: {leads.length}</div>
+                <div className='text-white px-2.5 py-1.5 rounded-sm bg-green-600'>Filtered leads: {filteredLeads.length}</div>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -389,9 +415,27 @@ export default function DashboardPage() {
                     Upload CSV
                   </Dialog.Title>
                   <form onSubmit={handleUploadSubmit} className="mt-4">
-                    <div className="mt-4">
-                      <input type="file" accept=".csv" onChange={handleFileUpload} className="w-full text-gray-900" />
-                      <p className="text-sm text-gray-500 mt-2">CSV must contain &apos;name&apos;, &apos;email&apos;, and &apos;phoneNumber&apos; columns.</p>
+                    <div 
+                      className={`mt-4 border-2 border-dashed rounded-md p-6 text-center ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
+                      onDragEnter={handleDragEnter}
+                      onDragLeave={handleDragLeave}
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
+                    >
+                      <input 
+                        type="file" 
+                        accept=".csv" 
+                        onChange={handleFileUpload} 
+                        className="hidden" 
+                        id="csv-upload"
+                      />
+                      <label htmlFor="csv-upload" className="cursor-pointer">
+                        <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                        <p className="mt-2 text-sm text-gray-600">
+                          {csvFile ? csvFile.name : 'Drag & drop a CSV file here, or click to select a file'}
+                        </p>
+                      </label>
+                      <p className="text-xs text-gray-500 mt-2">CSV must contain &apos;name&apos;, &apos;email&apos;, and &apos;phoneNumber&apos; columns.</p>
                     </div>
                     <div className="mt-6 flex justify-end space-x-2">
                       <button type="button" onClick={() => setShowUploadModal(false)} className="inline-flex justify-center rounded-md border border-transparent bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
