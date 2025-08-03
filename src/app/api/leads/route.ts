@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import { Lead } from '@/lib/models';
@@ -10,8 +9,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ message: 'Access denied. No token provided.' }, { status: 401 });
   }
 
-  const decoded = verifyToken(token);
-  if (!decoded) {
+  const decoded = verifyToken(token) as { userId: string };
+  if (!decoded || typeof decoded === 'string') {
     return NextResponse.json({ message: 'Invalid token.' }, { status: 400 });
   }
 
@@ -20,8 +19,11 @@ export async function GET(req: NextRequest) {
   try {
     const leads = await Lead.find({ userId: decoded.userId }).sort({ createdAt: -1 });
     return NextResponse.json(leads);
-  } catch (error) {
-    return NextResponse.json({ message: 'Server error', error }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ 
+      message: 'Server error', 
+      error: error instanceof Error ? error.message : 'An unknown error occurred' 
+    }, { status: 500 });
   }
 }
 
@@ -31,8 +33,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: 'Access denied. No token provided.' }, { status: 401 });
   }
 
-  const decoded = verifyToken(token);
-  if (!decoded) {
+  const decoded = verifyToken(token) as { userId: string };
+  if (!decoded || typeof decoded === 'string') {
     return NextResponse.json({ message: 'Invalid token.' }, { status: 400 });
   }
 
@@ -46,7 +48,10 @@ export async function POST(req: NextRequest) {
     });
     await lead.save();
     return NextResponse.json(lead, { status: 201 });
-  } catch (error) {
-    return NextResponse.json({ message: 'Server error', error }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ 
+      message: 'Server error', 
+      error: error instanceof Error ? error.message : 'An unknown error occurred' 
+    }, { status: 500 });
   }
 }

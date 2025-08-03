@@ -1,10 +1,9 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import { Lead } from '@/lib/models';
 import { verifyToken } from '@/lib/auth';
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '');
   if (!token) {
     return NextResponse.json({ message: 'Access denied. No token provided.' }, { status: 401 });
@@ -19,8 +18,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
   try {
     const body = await req.json();
+    const { id } = await params; // Await the params Promise
     const lead = await Lead.findOneAndUpdate(
-      { _id: params.id, userId: decoded.userId },
+      { _id: id, userId: decoded.userId },
       body,
       { new: true }
     );
@@ -35,7 +35,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '');
   if (!token) {
     return NextResponse.json({ message: 'Access denied. No token provided.' }, { status: 401 });
@@ -49,7 +49,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   await dbConnect();
 
   try {
-    const lead = await Lead.findOneAndDelete({ _id: params.id, userId: decoded.userId });
+    const { id } = await params; // Await the params Promise
+    const lead = await Lead.findOneAndDelete({ _id: id, userId: decoded.userId });
 
     if (!lead) {
       return NextResponse.json({ message: 'Lead not found' }, { status: 404 });
